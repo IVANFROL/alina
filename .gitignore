@@ -1,0 +1,25 @@
+# Временные файлы Excel
+~$*.xlsx
+~$*.xls
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Логи
+*.log
+
+# Node modules (если будет использоваться)
+node_modules/
+
+# Временные файлы анализа
+*_analysis.json
+logo_analysis.json
+template_analysis.json
+

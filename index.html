@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Таможенный калькулятор ТН ВЭД — СИРИУС</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin:0; padding:20px; background:#f5f5f7; color:#111827; }
+    .container {
+      max-width: 1200px; margin:0 auto; background:#fff; border-radius:16px;
+      padding:20px 24px 28px; box-shadow:0 18px 45px rgba(15,23,42,.12);
+    }
+    h1 { margin:0; font-size:24px; }
+    .header-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+    .logo-wrap{display:flex;align-items:center;gap:10px;}
+    .logo-wrap img{height:48px;width:auto;display:block;}
+    .muted{font-size:11px;color:#6b7280;margin-top:4px;}
+    .status{font-size:12px;margin-top:10px;color:#6b7280;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .status.ok{color:#059669;} .status.error{color:#dc2626;}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+    .upload-label{
+      display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;
+      background:#eef2ff;color:#3730a3;font-size:12px;cursor:pointer;
+    }
+    .upload-label input[type=file]{display:none;}
+    .section-title{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;font-size:15px;font-weight:700;color:#111827;}
+    .section-title span{font-size:11px;font-weight:500;color:#6b7280;}
+    .two-column{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1.4fr);gap:18px;margin-top:12px;}
+    @media(max-width:960px){.two-column{grid-template-columns:1fr;}}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 24px;}
+    .field{display:flex;flex-direction:column;gap:4px;}
+    label{font-size:13px;font-weight:600;color:#374151;}
+    input[type=number],input[type=text],select{
+      padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;
+      transition:border-color .15s, box-shadow .15s, background .15s;background:#f9fafb;
+    }
+    input[type=number]:focus,input[type=text]:focus,select:focus{
+      outline:none;border-color:#2563eb;box-shadow:0 0 0 1px rgba(37,99,235,.25);background:#fff;
+    }
+    input[readonly]{background:#f3f4f6;color:#4b5563;}
+    .hint{font-size:11px;color:#6b7280;}
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;background:#eef2ff;color:#3730a3;margin-left:4px;}
+    .btn-row{display:flex;gap:10px;margin:18px 0 10px;flex-wrap:wrap;}
+    button{
+      border-radius:999px;border:none;padding:9px 16px;font-size:14px;cursor:pointer;
+      display:inline-flex;align-items:center;gap:6px;transition:background .15s, box-shadow .15s;white-space:nowrap;
+    }
+    .btn-primary{background:#2563eb;color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.35);}
+    .btn-primary:hover{background:#1d4ed8;box-shadow:0 10px 22px rgba(37,99,235,.45);}
+    .btn-secondary{background:#e5e7eb;color:#111827;}
+    .btn-secondary:hover{background:#d1d5db;}
+    .result-card{
+      margin-top:14px;padding:14px 16px;border-radius:14px;background:#f9fafb;border:1px solid #e5e7eb;
+    }
+    .result-card h2{margin:0 0 8px;font-size:16px;}
+    .result-summary{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:8px;}
+    .result-pill{padding:6px 10px;border-radius:999px;background:#eef2ff;font-size:12px;color:#111827;}
+    .result-pill strong{font-weight:700;}
+    .result-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
+    .result-table th,.result-table td{padding:6px 8px;border-bottom:1px solid #e5e7eb;}
+    .result-table th{text-align:left;color:#6b7280;font-weight:600;background:#f3f4f6;}
+    .result-table tfoot td{font-weight:700;background:#f3f4f6;}
+    .warning{
+      font-size:12px;color:#b45309;background:#fffbeb;border-radius:10px;padding:6px 10px;
+      border:1px solid #fbbf24;margin-top:8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-row">
+      <div class="logo-wrap">
+        <img src="image.png" alt="Логотип СИРИУС" id="logoImage" onerror="this.style.display='none'" />
+        <h1>Таможенный калькулятор ТН ВЭД</h1>
+      </div>
+    </div>
+    <div class="muted">
+      Стоимость товара указывается <strong>за 1 единицу</strong>. Курсы валют подтягиваются по данным ЦБ РФ (CNY / USD / EUR),
+      в расчётах используется курс с надбавкой +3%.
+    </div>
+
+    <div class="status" id="tnved-status">
+      <span class="status-dot"></span>
+      <span>Справочник ТН ВЭД не загружен.</span>
+      <label class="upload-label">
+        📂 Загрузить файл ТН ВЭД (JSON или Excel)
+        <input type="file" id="tnvedFileInput"
+          accept=".json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.xlsx,.xls" />
+      </label>
+      <span id="tnved-file-name" class="muted"></span>
+    </div>
+    
+    <div class="status" id="logo-status" style="display:none;">
+      <span class="status-dot"></span>
+      <span>Логотип не загружен.</span>
+      <label class="upload-label">
+        🖼️ Загрузить логотип (PNG)
+        <input type="file" id="logoFileInput" accept=".png,image/png" />
+      </label>
+      <span id="logo-file-name" class="muted"></span>
+    </div>
+
+    <div class="section-title">
+      Параметры товара и сделки
+      <span>Обязательные поля для расчёта</span>
+    </div>
+
+    <div class="two-column">
+      <div>
+        <div class="grid">
+          <div class="field">
+            <label for="productName">Название товара</label>
+            <input type="text" id="productName" placeholder="Например, Электросамокат X" />
+            <div class="hint">Произвольное название для удобства в таблице и КП.</div>
+          </div>
+          <div class="field">
+            <label for="invoiceValue">Стоимость товара за 1 шт (в валюте сделки)</label>
+            <input type="number" id="invoiceValue" min="0" step="0.01" placeholder="Например, 100" />
+            <div class="hint" id="invoiceTotalHint">Общая сумма сделки: —</div>
+          </div>
+          <div class="field">
+            <label for="quantity">Количество, шт</label>
+            <input type="number" id="quantity" min="1" step="1" placeholder="Например, 500" />
+          </div>
+          <div class="field">
+            <label for="tnvedCode">Код ТН ВЭД <span class="badge">10 цифр</span></label>
+            <input type="text" id="tnvedCode" maxlength="10" placeholder="Например, 8511400008" />
+            <div class="hint">После ввода нажмите «Найти по ТН ВЭД» или просто выйдите из поля.</div>
+          </div>
+          <div class="field">
+            <label for="deliveryType">Вид доставки</label>
+            <select id="deliveryType">
+              <option value="rail">ЖД</option>
+              <option value="truck">Авто</option>
+              <option value="air">Авиа</option>
+              <option value="sea">Море</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="weight">Вес, кг (брутто)</label>
+            <input type="number" id="weight" min="0" step="0.01" placeholder="Например, 1200" />
+          </div>
+          <div class="field">
+            <label for="volume">Объём, м³</label>
+            <input type="number" id="volume" min="0" step="0.01" placeholder="Например, 18" />
+            <div class="hint">Для контроля минимальных партий (15–20 м³).</div>
+          </div>
+          <div class="field">
+            <label for="currency">Валюта сделки</label>
+            <select id="currency">
+              <option value="CNY" selected>CNY (юань)</option>
+              <option value="RUB">RUB</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="exchangeRate">Курс валюты к RUB</label>
+            <input type="number" id="exchangeRate" min="0" step="0.0001" placeholder="Авто по ЦБ РФ (+3%) или вручную" />
+            <div class="hint" id="rateHint">
+              Для CNY / USD / EUR курс пробуем подтянуть по данным ЦБ РФ (в расчётах с надбавкой 3%). Если не получилось — введите вручную.
+            </div>
+          </div>
+          <div class="field">
+            <label for="domesticDelivery">Доставка внутри Китая (в валюте сделки)</label>
+            <input type="number" id="domesticDelivery" min="0" step="0.01" placeholder="Например, 5000" />
+          </div>
+          <div class="field">
+            <label for="intlDeliveryRub">Международная доставка до РФ, RUB</label>
+            <input type="number" id="intlDeliveryRub" min="0" step="0.01" placeholder="Рассчитывается автоматически" readonly />
+            <div class="hint">Считается по виду доставки и объёму/весу.</div>
+          </div>
+          <div class="field">
+            <label for="dutyPercent">Пошлина, %</label>
+            <input type="number" id="dutyPercent" min="0" step="0.01" placeholder="Авто из справочника или вручную" />
+          </div>
+          <div class="field">
+            <label for="customsFeesRub">Таможенные сборы, RUB</label>
+            <input type="number" id="customsFeesRub" min="0" step="0.01" value="4900" />
+            <div class="hint">По умолчанию 4 900 ₽ на каждую товарную позицию.</div>
+          </div>
+          <div class="field">
+            <label for="vatPercent">НДС, %</label>
+            <input type="number" id="vatPercent" min="0" step="0.01" value="20" />
+          </div>
+          <div class="field">
+            <label for="excisePercent">Акциз, %</label>
+            <input type="number" id="excisePercent" min="0" step="0.01" placeholder="0, если нет акциза" />
+          </div>
+          <div class="field">
+            <label for="certCostsRub">Сертификация, RUB</label>
+            <input type="number" id="certCostsRub" min="0" step="0.01" value="30000" />
+          </div>
+          <div class="field">
+            <label for="otherCostsRub">Прочие издержки, RUB</label>
+            <input type="number" id="otherCostsRub" min="0" step="0.01" placeholder="Страхование, хранение и т.п." />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn-secondary" id="btnFindTnved">🔍 Найти по ТН ВЭД</button>
+          <button type="button" class="btn-primary" id="btnCalculate">⚙️ Рассчитать</button>
+          <button type="button" class="btn-primary" id="btnAddItem">➕ Добавить товар</button>
+          <button type="button" class="btn-secondary" id="btnReset">♻️ Сброс</button>
+        </div>
+
+        <div class="result-card" id="itemsCard">
+          <h2>Товары в расчёте (до 10 позиций)</h2>
+          <div class="hint">
+            Каждый расчёт по кнопке «Рассчитать» или «Добавить товар» добавляет строку в таблицу.
+            «Добавить товар» дополнительно очищает форму для ввода следующей позиции.
+          </div>
+          <div class="btn-row" style="margin-top:10px;margin-bottom:10px;">
+            <button type="button" class="btn-secondary" id="btnClearItems">🧹 Очистить таблицу товаров</button>
+            <button type="button" class="btn-secondary" id="btnExportExcel">📥 Выгрузить таблицу в Excel</button>
+            <button type="button" class="btn-primary" id="btnGenerateKP">🧾 Сформировать КП (Excel)</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="result-table" id="itemsTable" style="display:none;min-width:1200px;">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Название товара</th>
+                  <th>Код ТН ВЭД</th>
+                  <th>Описание</th>
+                  <th>Кол-во</th>
+                  <th>Цена за шт (валюта)</th>
+                  <th>Сумма сделки (валюта)</th>
+                  <th>Валюта</th>
+                  <th>Курс (с надбавкой)</th>
+                  <th>Сумма сделки, RUB</th>
+                  <th>Дост. внутри Китая, RUB</th>
+                  <th>Междунар. дост. до РФ, RUB</th>
+                  <th>Пошлина, %</th>
+                  <th>Пошлина, RUB</th>
+                  <th>НДС, %</th>
+                  <th>НДС, RUB</th>
+                  <th>Акциз, %</th>
+                  <th>Акциз, RUB</th>
+                  <th>Тамож. сборы, RUB</th>
+                  <th>Сертификация, RUB</th>
+                  <th>Прочие издержки, RUB</th>
+                  <th>Итого расходов, RUB</th>
+                  <th>Себестоимость за шт, RUB</th>
+                </tr>
+              </thead>
+              <tbody id="itemsTableBody"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="9">Итого по всем товарам</td>
+                  <td id="itemsTotalInvoiceRub"></td>
+                  <td id="itemsTotalDomesticDeliveryRub"></td>
+                  <td id="itemsTotalIntlDeliveryRub"></td>
+                  <td></td>
+                  <td id="itemsTotalDutyRub"></td>
+                  <td></td>
+                  <td id="itemsTotalVatRub"></td>
+                  <td></td>
+                  <td id="itemsTotalExciseRub"></td>
+                  <td id="itemsTotalCustomsRub"></td>
+                  <td id="itemsTotalCertRub"></td>
+                  <td id="itemsTotalOtherRub"></td>
+                  <td id="itemsTotalCostsRub"></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div id="validationWarning" class="warning" style="display:none;"></div>
+
+        <div class="result-card" style="margin-top:14px;">
+          <h2>Настройки тарифов доставки</h2>
+          <div class="grid">
+            <div class="field">
+              <label for="tariffTruckPrice">Авто: стоимость целой фуры, RUB</label>
+              <input type="number" id="tariffTruckPrice" min="0" step="1" value="1280000" />
+            </div>
+            <div class="field">
+              <label for="tariffTruckVolume">Авто: объём фуры, м³</label>
+              <input type="number" id="tariffTruckVolume" min="1" step="0.1" value="110" />
+            </div>
+            <div class="field">
+              <label for="tariffRailPrice">ЖД: стоимость 40' контейнера, RUB</label>
+              <input type="number" id="tariffRailPrice" min="0" step="1" value="535000" />
+            </div>
+            <div class="field">
+              <label for="tariffRailVolume">ЖД: расчётный объём контейнера, м³</label>
+              <input type="number" id="tariffRailVolume" min="1" step="0.1" value="70" />
+            </div>
+            <div class="field">
+              <label for="tariffSeaPrice">Море: стоимость 40' контейнера, RUB</label>
+              <input type="number" id="tariffSeaPrice" min="0" step="1" value="240000" />
+            </div>
+            <div class="field">
+              <label for="tariffSeaVolume">Море: расчётный объём контейнера, м³</label>
+              <input type="number" id="tariffSeaVolume" min="1" step="0.1" value="70" />
+            </div>
+            <div class="field">
+              <label for="tariffAirPerKg">Авиа: тариф за 1 кг (в валюте сделки)</label>
+              <input type="number" id="tariffAirPerKg" min="0" step="0.01" value="50" />
+              <div class="hint">По умолчанию 50 юаней/кг. Если меняете валюту сделки, подставьте тариф в этой валюте.</div>
+            </div>
+          </div>
+          <div class="hint" style="margin-top:6px;">
+            Для авто/ЖД/моря доставка считается пропорционально объёму (м³) к полному контейнеру/фуре.
+            Для авиа — по весу (кг).
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="result-card" id="tnvedInfoCard">
+          <h2>Информация по коду ТН ВЭД</h2>
+          <div id="tnvedInfoBody" class="muted">
+            1) Загрузите JSON или Excel-файл ТН ВЭД.<br />
+            2) Введите код ТН ВЭД и нажмите «Найти по ТН ВЭД», чтобы увидеть описание и ставку пошлины.
+          </div>
+        </div>
+
+        <div class="result-card" id="resultCard" style="margin-top:12px;">
+          <h2>Результат расчёта</h2>
+          <div id="resultSummary" class="result-summary"></div>
+          <table class="result-table" id="resultTable" style="display:none;">
+            <thead>
+              <tr>
+                <th>Статья расходов</th>
+                <th>Сумма, RUB</th>
+              </tr>
+            </thead>
+            <tbody id="resultTableBody"></tbody>
+            <tfoot>
+              <tr>
+                <td>ИТОГО расходов</td>
+                <td id="totalCostsCell"></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div id="resultNote" class="muted"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
