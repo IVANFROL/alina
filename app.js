@@ -1238,7 +1238,7 @@ async function generateCommercialOfferExcel() {
       // Вычисляем значения для формул
       const invoiceCny = unitPrice * qty; // D - Инвойс (юани)
       const invoiceRub = invoiceCny * cnyRate / 0.98; // E - Инвойс (руб) с комиссией банка 2%
-      const dutyPercent = item.dutyPercent || 10;
+      const dutyPercent = (item.dutyPercent != null && item.dutyPercent !== '') ? Number(item.dutyPercent) : 10;
       const duty = invoiceRub * dutyPercent / 100; // H - Пошлина
       const vat = invoiceRub * 20 / 100; // I - НДС
       const customsTotal = duty + vat + customsFeeKp + certKp; // J - Таможенные платежи
@@ -1246,111 +1246,252 @@ async function generateCommercialOfferExcel() {
       const totalPayments = deliveryWithMarkup + invoiceRub + customsTotal + siriusCommission + 0; // N - Итого платежи
       const unitCost = qty > 0 ? totalPayments / qty : 0; // O - Себестоимость единицы
       
+      // A - Модель
+      const cellA = worksheet.getCell(currentRow, 1);
+      cellA.value = model;
+      cellA.font = { size: 11, name: "Calibri" };
+      cellA.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellA.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellA.alignment = { vertical: "middle", horizontal: "left" };
+      
+      // B - Цена за шт
+      const cellB = worksheet.getCell(currentRow, 2);
+      cellB.value = unitPrice;
+      cellB.font = { size: 11, name: "Calibri" };
+      cellB.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellB.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellB.alignment = { vertical: "middle", horizontal: "right" };
+      cellB.numFmt = "#,##0.00";
+      
+      // C - Кол-во
+      const cellC = worksheet.getCell(currentRow, 3);
+      cellC.value = qty;
+      cellC.font = { size: 11, name: "Calibri" };
+      cellC.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellC.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellC.alignment = { vertical: "middle", horizontal: "right" };
+      cellC.numFmt = "#,##0";
+      
       // D - Инвойс (юани) = B * C
       const cellD = worksheet.getCell(currentRow, 4);
       cellD.formula = `B${currentRow}*C${currentRow}`;
-      cellD.result = invoiceCny; // Предвычисленное значение
+      cellD.result = invoiceCny;
       cellD.numFmt = "#,##0.00";
+      cellD.font = { size: 11, name: "Calibri" };
+      cellD.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellD.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellD.alignment = { vertical: "middle", horizontal: "right" };
       
       // E - Инвойс (руб) с комиссией банка 2% = D * курс / 0.98
       const cellE = worksheet.getCell(currentRow, 5);
       cellE.formula = `D${currentRow}*${cnyRateCell}/0.98`;
-      cellE.result = invoiceRub; // Предвычисленное значение
+      cellE.result = invoiceRub;
       cellE.numFmt = "#,##0.00";
+      cellE.font = { size: 11, name: "Calibri" };
+      cellE.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellE.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellE.alignment = { vertical: "middle", horizontal: "right" };
       
       // F - Сбор
-      worksheet.getCell(currentRow, 6).value = customsFeeKp;
-      worksheet.getCell(currentRow, 6).numFmt = "#,##0.00";
+      const cellF = worksheet.getCell(currentRow, 6);
+      cellF.value = customsFeeKp;
+      cellF.numFmt = "#,##0.00";
+      cellF.font = { size: 11, name: "Calibri" };
+      cellF.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellF.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellF.alignment = { vertical: "middle", horizontal: "right" };
       
       // G - Разрешительные документы
-      worksheet.getCell(currentRow, 7).value = certKp;
-      worksheet.getCell(currentRow, 7).numFmt = "#,##0.00";
+      const cellG = worksheet.getCell(currentRow, 7);
+      cellG.value = certKp;
+      cellG.numFmt = "#,##0.00";
+      cellG.font = { size: 11, name: "Calibri" };
+      cellG.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellG.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellG.alignment = { vertical: "middle", horizontal: "right" };
       
       // H - Пошлина = E * процент_пошлины / 100
       const cellH = worksheet.getCell(currentRow, 8);
       cellH.formula = `E${currentRow}*${dutyPercent}/100`;
-      cellH.result = duty; // Предвычисленное значение
+      cellH.result = duty;
       cellH.numFmt = "#,##0.00";
+      cellH.font = { size: 11, name: "Calibri" };
+      cellH.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellH.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellH.alignment = { vertical: "middle", horizontal: "right" };
       
       // I - НДС 20% = E * 20 / 100
       const cellI = worksheet.getCell(currentRow, 9);
       cellI.formula = `E${currentRow}*20/100`;
-      cellI.result = vat; // Предвычисленное значение
+      cellI.result = vat;
       cellI.numFmt = "#,##0.00";
+      cellI.font = { size: 11, name: "Calibri" };
+      cellI.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellI.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellI.alignment = { vertical: "middle", horizontal: "right" };
       
       // J - Таможенные платежи ИТОГО = H + I + F + G
       const cellJ = worksheet.getCell(currentRow, 10);
       cellJ.formula = `H${currentRow}+I${currentRow}+F${currentRow}+G${currentRow}`;
-      cellJ.result = customsTotal; // Предвычисленное значение
+      cellJ.result = customsTotal;
       cellJ.numFmt = "#,##0.00";
+      cellJ.font = { size: 11, name: "Calibri" };
+      cellJ.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellJ.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellJ.alignment = { vertical: "middle", horizontal: "right" };
       
       // K - Доставка (значение, потом обновим формулой)
-      worksheet.getCell(currentRow, 11).value = deliveryWithMarkup;
-      worksheet.getCell(currentRow, 11).numFmt = "#,##0.00";
+      const cellK = worksheet.getCell(currentRow, 11);
+      cellK.value = deliveryWithMarkup;
+      cellK.numFmt = "#,##0.00";
+      cellK.font = { size: 11, name: "Calibri" };
+      cellK.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellK.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellK.alignment = { vertical: "middle", horizontal: "right" };
       
       // L - Инспекция
-      worksheet.getCell(currentRow, 12).value = 0;
-      worksheet.getCell(currentRow, 12).numFmt = "0";
+      const cellL = worksheet.getCell(currentRow, 12);
+      cellL.value = 0;
+      cellL.numFmt = "0";
+      cellL.font = { size: 11, name: "Calibri" };
+      cellL.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellL.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellL.alignment = { vertical: "middle", horizontal: "right" };
       
       // M - Комиссия Сириус 5% = (K + E + J) * 0.05
       const cellM = worksheet.getCell(currentRow, 13);
       cellM.formula = `(K${currentRow}+E${currentRow}+J${currentRow})*0.05`;
-      cellM.result = siriusCommission; // Предвычисленное значение
+      cellM.result = siriusCommission;
       cellM.numFmt = "#,##0.00";
+      cellM.font = { size: 11, name: "Calibri" };
+      cellM.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellM.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellM.alignment = { vertical: "middle", horizontal: "right" };
       
       // N - Итого все платежи = K + E + J + M + L
       const cellN = worksheet.getCell(currentRow, 14);
       cellN.formula = `K${currentRow}+E${currentRow}+J${currentRow}+M${currentRow}+L${currentRow}`;
-      cellN.result = totalPayments; // Предвычисленное значение
+      cellN.result = totalPayments;
       cellN.numFmt = "#,##0.00";
+      cellN.font = { size: 11, name: "Calibri" };
+      cellN.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellN.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellN.alignment = { vertical: "middle", horizontal: "right" };
       
       // O - Себестоимость единицы = N / C
       const cellO = worksheet.getCell(currentRow, 15);
       cellO.formula = `N${currentRow}/C${currentRow}`;
-      cellO.result = unitCost; // Предвычисленное значение
+      cellO.result = unitCost;
       cellO.numFmt = "#,##0.00";
+      cellO.font = { size: 11, name: "Calibri" };
+      cellO.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellO.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellO.alignment = { vertical: "middle", horizontal: "right" };
       
-      // P - пустая колонка
-      worksheet.getCell(currentRow, 17).value = item.weight || 0; // Q - Вес
-      worksheet.getCell(currentRow, 17).numFmt = "#,##0.00";
-      worksheet.getCell(currentRow, 18).value = item.volume || 0; // R - Объем
-      worksheet.getCell(currentRow, 18).numFmt = "#,##0.00";
-
-      // Форматирование ячеек данных (применяем после установки формул, чтобы не перезаписать numFmt)
-      for (let col = 1; col <= 18; col++) {
-        if (col === 16) continue; // Пропускаем пустую колонку P
-        const cell = worksheet.getCell(currentRow, col);
-        
-        // Сохраняем numFmt, если он уже установлен
-        const existingNumFmt = cell.numFmt;
-        
-        cell.font = { size: 11, name: "Calibri" };
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFFFFFFF" },
-        };
-        cell.border = {
-          top: { style: "thin", color: { argb: "FF000000" } },
-          left: { style: "thin", color: { argb: "FF000000" } },
-          bottom: { style: "thin", color: { argb: "FF000000" } },
-          right: { style: "thin", color: { argb: "FF000000" } },
-        };
-        cell.alignment = { 
-          vertical: "middle", 
-          horizontal: (col === 1 || col === 17 || col === 18) ? "left" : "right" 
-        };
-        
-        // Восстанавливаем numFmt, если он был установлен
-        if (existingNumFmt) {
-          cell.numFmt = existingNumFmt;
-        } else if (col >= 4 && col <= 15 && col !== 12) {
-          // Для числовых колонок устанавливаем формат, если его не было
-          cell.numFmt = "#,##0.00";
-        } else if (col === 12) {
-          cell.numFmt = "0";
-        }
-      }
+      // P - пустая колонка (16)
+      
+      // Q - Вес (17)
+      const cellQ = worksheet.getCell(currentRow, 17);
+      cellQ.value = item.weight || 0;
+      cellQ.numFmt = "#,##0.00";
+      cellQ.font = { size: 11, name: "Calibri" };
+      cellQ.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellQ.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellQ.alignment = { vertical: "middle", horizontal: "left" };
+      
+      // R - Объем (18)
+      const cellR = worksheet.getCell(currentRow, 18);
+      cellR.value = item.volume || 0;
+      cellR.numFmt = "#,##0.00";
+      cellR.font = { size: 11, name: "Calibri" };
+      cellR.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cellR.border = {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      };
+      cellR.alignment = { vertical: "middle", horizontal: "left" };
 
       currentRow++;
     });
@@ -1382,7 +1523,7 @@ async function generateCommercialOfferExcel() {
       const qty = Number(item.quantity) || 0;
       const invoiceCny = unitPrice * qty;
       const invoiceRub = invoiceCny * cnyRate / 0.98;
-      const dutyPercent = item.dutyPercent || 10;
+      const dutyPercent = (item.dutyPercent != null && item.dutyPercent !== '') ? Number(item.dutyPercent) : 10;
       const duty = invoiceRub * dutyPercent / 100;
       const vat = invoiceRub * 20 / 100;
       const customsFeeKp = (item.customsFeesRub || 0) * 2;
@@ -1499,7 +1640,7 @@ async function generateCommercialOfferExcel() {
         const qty = Number(item.quantity) || 0;
         const invoiceCny = unitPrice * qty;
         const invoiceRub = invoiceCny * cnyRate / 0.98;
-        const dutyPercent = item.dutyPercent || 10;
+        const dutyPercent = (item.dutyPercent != null && item.dutyPercent !== '') ? Number(item.dutyPercent) : 10;
         const duty = invoiceRub * dutyPercent / 100;
         const vat = invoiceRub * 20 / 100;
         const customsFeeKp = (item.customsFeesRub || 0) * 2;
@@ -1548,10 +1689,16 @@ async function generateCommercialOfferExcel() {
     cellR.result = totalVolumeValue;
     cellR.numFmt = "#,##0.00";
 
-    // Форматирование строки ИТОГО
+    // Форматирование строки ИТОГО (сохраняем формулы и numFmt)
     for (let col = 1; col <= 18; col++) {
       if (col === 16) continue; // Пропускаем пустую колонку P
       const cell = worksheet.getCell(currentRow, col);
+      
+      // Сохраняем существующие formula и numFmt
+      const existingFormula = cell.formula;
+      const existingNumFmt = cell.numFmt;
+      const existingResult = cell.result;
+      
       cell.font = { bold: true, size: 11, name: "Calibri" };
       cell.fill = {
         type: "pattern",
@@ -1564,13 +1711,31 @@ async function generateCommercialOfferExcel() {
         bottom: { style: "thin", color: { argb: "FF000000" } },
         right: { style: "thin", color: { argb: "FF000000" } },
       };
-      if (col > 1 && col !== 2 && col !== 15) {
+      
+      // Восстанавливаем formula и result, если они были
+      if (existingFormula) {
+        cell.formula = existingFormula;
+        if (existingResult !== undefined) {
+          cell.result = existingResult;
+        }
+      }
+      
+      // Восстанавливаем numFmt, если он был установлен
+      if (existingNumFmt) {
+        cell.numFmt = existingNumFmt;
+      } else if (col > 1 && col !== 2 && col !== 15) {
+        // Устанавливаем numFmt только для ячеек без формул
         if (col === 12) {
           cell.numFmt = "0";
         } else {
           cell.numFmt = "#,##0";
         }
+      }
+      
+      if (col > 1 && col !== 2 && col !== 15) {
         cell.alignment = { vertical: "middle", horizontal: "right" };
+      } else if (col === 1) {
+        cell.alignment = { vertical: "middle", horizontal: "left" };
       }
     }
 
