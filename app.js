@@ -1236,8 +1236,8 @@ async function generateCommercialOfferExcel() {
       worksheet.getCell(currentRow, 3).value = qty; // C - Кол-во
       
       // Вычисляем значения для формул
-      const invoiceCny = unitPrice * qty; // D - Инвойс (юани)
-      const invoiceRub = invoiceCny * cnyRate / 0.98; // E - Инвойс (руб) с комиссией банка 2%
+      const invoiceCny = Number(unitPrice) * Number(qty); // D - Инвойс (юани)
+      const invoiceRub = invoiceCny * Number(cnyRate) / 0.98; // E - Инвойс (руб) с комиссией банка 2%
       const dutyPercent = (item.dutyPercent != null && item.dutyPercent !== '') ? Number(item.dutyPercent) : 10;
       const duty = invoiceRub * dutyPercent / 100; // H - Пошлина
       const vat = invoiceRub * 20 / 100; // I - НДС
@@ -1245,6 +1245,21 @@ async function generateCommercialOfferExcel() {
       const siriusCommission = (deliveryWithMarkup + invoiceRub + customsTotal) * 0.05; // M - Комиссия Сириус
       const totalPayments = deliveryWithMarkup + invoiceRub + customsTotal + siriusCommission + 0; // N - Итого платежи
       const unitCost = qty > 0 ? totalPayments / qty : 0; // O - Себестоимость единицы
+      
+      // Отладка: проверяем вычисленные значения
+      if (idx === 0) {
+        console.log('Первый товар - вычисленные значения:', {
+          invoiceCny,
+          invoiceRub,
+          duty,
+          vat,
+          customsTotal,
+          siriusCommission,
+          totalPayments,
+          unitCost,
+          dutyPercent
+        });
+      }
       
       // A - Модель
       const cellA = worksheet.getCell(currentRow, 1);
@@ -1289,8 +1304,7 @@ async function generateCommercialOfferExcel() {
       
       // D - Инвойс (юани) = B * C
       const cellD = worksheet.getCell(currentRow, 4);
-      cellD.formula = `B${currentRow}*C${currentRow}`;
-      cellD.result = invoiceCny;
+      cellD.value = { formula: `B${currentRow}*C${currentRow}`, result: Number(invoiceCny) };
       cellD.numFmt = "#,##0.00";
       cellD.font = { size: 11, name: "Calibri" };
       cellD.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1304,8 +1318,7 @@ async function generateCommercialOfferExcel() {
       
       // E - Инвойс (руб) с комиссией банка 2% = D * курс / 0.98
       const cellE = worksheet.getCell(currentRow, 5);
-      cellE.formula = `D${currentRow}*${cnyRateCell}/0.98`;
-      cellE.result = invoiceRub;
+      cellE.value = { formula: `D${currentRow}*${cnyRateCell}/0.98`, result: Number(invoiceRub) };
       cellE.numFmt = "#,##0.00";
       cellE.font = { size: 11, name: "Calibri" };
       cellE.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1347,8 +1360,7 @@ async function generateCommercialOfferExcel() {
       
       // H - Пошлина = E * процент_пошлины / 100
       const cellH = worksheet.getCell(currentRow, 8);
-      cellH.formula = `E${currentRow}*${dutyPercent}/100`;
-      cellH.result = duty;
+      cellH.value = { formula: `E${currentRow}*${dutyPercent}/100`, result: Number(duty) };
       cellH.numFmt = "#,##0.00";
       cellH.font = { size: 11, name: "Calibri" };
       cellH.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1362,8 +1374,7 @@ async function generateCommercialOfferExcel() {
       
       // I - НДС 20% = E * 20 / 100
       const cellI = worksheet.getCell(currentRow, 9);
-      cellI.formula = `E${currentRow}*20/100`;
-      cellI.result = vat;
+      cellI.value = { formula: `E${currentRow}*20/100`, result: Number(vat) };
       cellI.numFmt = "#,##0.00";
       cellI.font = { size: 11, name: "Calibri" };
       cellI.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1377,8 +1388,7 @@ async function generateCommercialOfferExcel() {
       
       // J - Таможенные платежи ИТОГО = H + I + F + G
       const cellJ = worksheet.getCell(currentRow, 10);
-      cellJ.formula = `H${currentRow}+I${currentRow}+F${currentRow}+G${currentRow}`;
-      cellJ.result = customsTotal;
+      cellJ.value = { formula: `H${currentRow}+I${currentRow}+F${currentRow}+G${currentRow}`, result: Number(customsTotal) };
       cellJ.numFmt = "#,##0.00";
       cellJ.font = { size: 11, name: "Calibri" };
       cellJ.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1420,8 +1430,7 @@ async function generateCommercialOfferExcel() {
       
       // M - Комиссия Сириус 5% = (K + E + J) * 0.05
       const cellM = worksheet.getCell(currentRow, 13);
-      cellM.formula = `(K${currentRow}+E${currentRow}+J${currentRow})*0.05`;
-      cellM.result = siriusCommission;
+      cellM.value = { formula: `(K${currentRow}+E${currentRow}+J${currentRow})*0.05`, result: Number(siriusCommission) };
       cellM.numFmt = "#,##0.00";
       cellM.font = { size: 11, name: "Calibri" };
       cellM.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1435,8 +1444,7 @@ async function generateCommercialOfferExcel() {
       
       // N - Итого все платежи = K + E + J + M + L
       const cellN = worksheet.getCell(currentRow, 14);
-      cellN.formula = `K${currentRow}+E${currentRow}+J${currentRow}+M${currentRow}+L${currentRow}`;
-      cellN.result = totalPayments;
+      cellN.value = { formula: `K${currentRow}+E${currentRow}+J${currentRow}+M${currentRow}+L${currentRow}`, result: Number(totalPayments) };
       cellN.numFmt = "#,##0.00";
       cellN.font = { size: 11, name: "Calibri" };
       cellN.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1450,8 +1458,7 @@ async function generateCommercialOfferExcel() {
       
       // O - Себестоимость единицы = N / C
       const cellO = worksheet.getCell(currentRow, 15);
-      cellO.formula = `N${currentRow}/C${currentRow}`;
-      cellO.result = unitCost;
+      cellO.value = { formula: `N${currentRow}/C${currentRow}`, result: Number(unitCost) };
       cellO.numFmt = "#,##0.00";
       cellO.font = { size: 11, name: "Calibri" };
       cellO.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
@@ -1545,43 +1552,35 @@ async function generateCommercialOfferExcel() {
     
     // Формулы для строки ИТОГО с предвычисленными значениями
     const cellC = worksheet.getCell(currentRow, 3);
-    cellC.formula = `SUM(C${firstDataRow}:C${lastDataRow})`;
-    cellC.result = totalQty;
+    cellC.value = { formula: `SUM(C${firstDataRow}:C${lastDataRow})`, result: Number(totalQty) };
     cellC.numFmt = "#,##0";
     
     const cellD = worksheet.getCell(currentRow, 4);
-    cellD.formula = `SUM(D${firstDataRow}:D${lastDataRow})`;
-    cellD.result = totalInvoiceCny;
+    cellD.value = { formula: `SUM(D${firstDataRow}:D${lastDataRow})`, result: Number(totalInvoiceCny) };
     cellD.numFmt = "#,##0.00";
     
     const cellE = worksheet.getCell(currentRow, 5);
-    cellE.formula = `SUM(E${firstDataRow}:E${lastDataRow})`;
-    cellE.result = totalInvoiceRub;
+    cellE.value = { formula: `SUM(E${firstDataRow}:E${lastDataRow})`, result: Number(totalInvoiceRub) };
     cellE.numFmt = "#,##0.00";
     
     const cellF = worksheet.getCell(currentRow, 6);
-    cellF.formula = `SUM(F${firstDataRow}:F${lastDataRow})`;
-    cellF.result = totalCustomsFee;
+    cellF.value = { formula: `SUM(F${firstDataRow}:F${lastDataRow})`, result: Number(totalCustomsFee) };
     cellF.numFmt = "#,##0.00";
     
     const cellG = worksheet.getCell(currentRow, 7);
-    cellG.formula = `SUM(G${firstDataRow}:G${lastDataRow})`;
-    cellG.result = totalCert;
+    cellG.value = { formula: `SUM(G${firstDataRow}:G${lastDataRow})`, result: Number(totalCert) };
     cellG.numFmt = "#,##0.00";
     
     const cellH = worksheet.getCell(currentRow, 8);
-    cellH.formula = `SUM(H${firstDataRow}:H${lastDataRow})`;
-    cellH.result = totalDuty;
+    cellH.value = { formula: `SUM(H${firstDataRow}:H${lastDataRow})`, result: Number(totalDuty) };
     cellH.numFmt = "#,##0.00";
     
     const cellI = worksheet.getCell(currentRow, 9);
-    cellI.formula = `SUM(I${firstDataRow}:I${lastDataRow})`;
-    cellI.result = totalVat;
+    cellI.value = { formula: `SUM(I${firstDataRow}:I${lastDataRow})`, result: Number(totalVat) };
     cellI.numFmt = "#,##0.00";
     
     const cellJ = worksheet.getCell(currentRow, 10);
-    cellJ.formula = `SUM(J${firstDataRow}:J${lastDataRow})`;
-    cellJ.result = totalCustoms;
+    cellJ.value = { formula: `SUM(J${firstDataRow}:J${lastDataRow})`, result: Number(totalCustoms) };
     cellJ.numFmt = "#,##0.00";
     
     // Вычисляем суммы для M и N
@@ -1631,8 +1630,7 @@ async function generateCommercialOfferExcel() {
         const volume = Number(item.volume) || 0;
         const deliveryValue = totalVolumeValue > 0 ? (totalDeliveryValue / totalVolumeValue * volume) : 0;
         const cellK = worksheet.getCell(dataRow, 11);
-        cellK.formula = `$K$${totalDeliveryRow}/$R$${totalVolumeRow}*R${dataRow}`;
-        cellK.result = deliveryValue;
+        cellK.value = { formula: `$K$${totalDeliveryRow}/$R$${totalVolumeRow}*R${dataRow}`, result: Number(deliveryValue) };
         cellK.numFmt = "#,##0.00";
         
         // Пересчитываем M и N с новой доставкой
@@ -1650,43 +1648,35 @@ async function generateCommercialOfferExcel() {
         const totalPayments = deliveryValue + invoiceRub + customsTotal + siriusCommission + 0;
         
         const cellM = worksheet.getCell(dataRow, 13);
-        cellM.formula = `(K${dataRow}+E${dataRow}+J${dataRow})*0.05`;
-        cellM.result = siriusCommission;
+        cellM.value = { formula: `(K${dataRow}+E${dataRow}+J${dataRow})*0.05`, result: Number(siriusCommission) };
         
         const cellN = worksheet.getCell(dataRow, 14);
-        cellN.formula = `K${dataRow}+E${dataRow}+J${dataRow}+M${dataRow}+L${dataRow}`;
-        cellN.result = totalPayments;
+        cellN.value = { formula: `K${dataRow}+E${dataRow}+J${dataRow}+M${dataRow}+L${dataRow}`, result: Number(totalPayments) };
       }
     } else {
       const cellK = worksheet.getCell(currentRow, 11);
-      cellK.formula = `SUM(K${firstDataRow}:K${lastDataRow})`;
-      cellK.result = totalDeliveryValue;
+      cellK.value = { formula: `SUM(K${firstDataRow}:K${lastDataRow})`, result: Number(totalDeliveryValue) };
       cellK.numFmt = "#,##0.00";
     }
     
     const cellL = worksheet.getCell(currentRow, 12);
-    cellL.formula = `SUM(L${firstDataRow}:L${lastDataRow})`;
-    cellL.result = 0;
+    cellL.value = { formula: `SUM(L${firstDataRow}:L${lastDataRow})`, result: 0 };
     cellL.numFmt = "0";
     
     const cellM = worksheet.getCell(currentRow, 13);
-    cellM.formula = `SUM(M${firstDataRow}:M${lastDataRow})`;
-    cellM.result = totalSiriusCommission;
+    cellM.value = { formula: `SUM(M${firstDataRow}:M${lastDataRow})`, result: Number(totalSiriusCommission) };
     cellM.numFmt = "#,##0.00";
     
     const cellN = worksheet.getCell(currentRow, 14);
-    cellN.formula = `SUM(N${firstDataRow}:N${lastDataRow})`;
-    cellN.result = totalPayments;
+    cellN.value = { formula: `SUM(N${firstDataRow}:N${lastDataRow})`, result: Number(totalPayments) };
     cellN.numFmt = "#,##0.00";
     
     const cellQ = worksheet.getCell(currentRow, 17);
-    cellQ.formula = `SUM(Q${firstDataRow}:Q${lastDataRow})`; // Вес
-    cellQ.result = totalWeight;
+    cellQ.value = { formula: `SUM(Q${firstDataRow}:Q${lastDataRow})`, result: Number(totalWeight) }; // Вес
     cellQ.numFmt = "#,##0.00";
     
     const cellR = worksheet.getCell(currentRow, 18);
-    cellR.formula = `SUM(R${firstDataRow}:R${lastDataRow})`; // Объем
-    cellR.result = totalVolumeValue;
+    cellR.value = { formula: `SUM(R${firstDataRow}:R${lastDataRow})`, result: Number(totalVolumeValue) }; // Объем
     cellR.numFmt = "#,##0.00";
 
     // Форматирование строки ИТОГО (сохраняем формулы и numFmt)
