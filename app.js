@@ -1100,6 +1100,7 @@ async function generateCommercialOfferExcel() {
 
   const cnyValueCell = worksheet.getCell(`B${currentRow}`);
   cnyValueCell.value = cnyRate;
+  cnyValueCell.numFmt = "#,##0.00"; // Формат числа для курса
   cnyValueCell.font = { bold: true, size: 11, name: "Calibri" };
   cnyValueCell.border = {
     top: { style: "thin", color: { argb: "FF000000" } },
@@ -1207,9 +1208,14 @@ async function generateCommercialOfferExcel() {
 
     items.forEach((item, idx) => {
       const model = item.productName || "";
-      const unitPrice = item.unitPrice || 0;
-      const qty = item.quantity || 0;
-      const volume = item.volume || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      const qty = Number(item.quantity) || 0;
+      const volume = Number(item.volume) || 0;
+      
+      // Проверка данных для отладки
+      if (!unitPrice || !qty) {
+        console.warn(`Товар ${idx + 1} (${model}): unitPrice=${unitPrice}, qty=${qty}`);
+      }
 
       const domesticDeliveryRub = item.domesticDeliveryRub || 0;
       const intlDeliveryRubBase = calcIntlDeliveryRub(mode, volume, item);
@@ -1228,39 +1234,78 @@ async function generateCommercialOfferExcel() {
       worksheet.getCell(currentRow, 1).value = model; // A - Модель
       worksheet.getCell(currentRow, 2).value = unitPrice; // B - Цена за шт
       worksheet.getCell(currentRow, 3).value = qty; // C - Кол-во
-      worksheet.getCell(currentRow, 4).formula = `B${currentRow}*C${currentRow}`; // D - Инвойс (юани)
-      worksheet.getCell(currentRow, 4).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 5).formula = `D${currentRow}*${cnyRateCell}/0.98`; // E - Инвойс (руб) с комиссией банка 2% (деление на 0.98 = +2%)
-      worksheet.getCell(currentRow, 5).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 6).value = customsFeeKp; // F - Сбор
-      worksheet.getCell(currentRow, 6).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 7).value = certKp; // G - Разрешительные документы
-      worksheet.getCell(currentRow, 7).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 8).formula = `E${currentRow}*${item.dutyPercent || 10}%`; // H - Пошлина (процент от инвойса в рублях)
-      worksheet.getCell(currentRow, 8).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 9).formula = `E${currentRow}*20%`; // I - НДС 20%
-      worksheet.getCell(currentRow, 9).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 10).formula = `H${currentRow}+I${currentRow}+F${currentRow}+G${currentRow}`; // J - Таможенные платежи ИТОГО
-      worksheet.getCell(currentRow, 10).numFmt = "#,##0";
-      // K - Доставка (временно ставим значение, потом обновим формулой)
-      worksheet.getCell(currentRow, 11).value = deliveryWithMarkup; // K - Доставка
-      worksheet.getCell(currentRow, 11).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 12).value = 0; // L - Инспекция
+      
+      // D - Инвойс (юани) = B * C
+      const cellD = worksheet.getCell(currentRow, 4);
+      cellD.formula = `B${currentRow}*C${currentRow}`;
+      cellD.numFmt = "#,##0.00";
+      
+      // E - Инвойс (руб) с комиссией банка 2% = D * курс / 0.98
+      const cellE = worksheet.getCell(currentRow, 5);
+      cellE.formula = `D${currentRow}*${cnyRateCell}/0.98`;
+      cellE.numFmt = "#,##0.00";
+      
+      // F - Сбор
+      worksheet.getCell(currentRow, 6).value = customsFeeKp;
+      worksheet.getCell(currentRow, 6).numFmt = "#,##0.00";
+      
+      // G - Разрешительные документы
+      worksheet.getCell(currentRow, 7).value = certKp;
+      worksheet.getCell(currentRow, 7).numFmt = "#,##0.00";
+      
+      // H - Пошлина = E * процент_пошлины / 100
+      const dutyPercent = item.dutyPercent || 10;
+      const cellH = worksheet.getCell(currentRow, 8);
+      cellH.formula = `E${currentRow}*${dutyPercent}/100`;
+      cellH.numFmt = "#,##0.00";
+      
+      // I - НДС 20% = E * 20 / 100
+      const cellI = worksheet.getCell(currentRow, 9);
+      cellI.formula = `E${currentRow}*20/100`;
+      cellI.numFmt = "#,##0.00";
+      
+      // J - Таможенные платежи ИТОГО = H + I + F + G
+      const cellJ = worksheet.getCell(currentRow, 10);
+      cellJ.formula = `H${currentRow}+I${currentRow}+F${currentRow}+G${currentRow}`;
+      cellJ.numFmt = "#,##0.00";
+      
+      // K - Доставка (значение, потом обновим формулой)
+      worksheet.getCell(currentRow, 11).value = deliveryWithMarkup;
+      worksheet.getCell(currentRow, 11).numFmt = "#,##0.00";
+      
+      // L - Инспекция
+      worksheet.getCell(currentRow, 12).value = 0;
       worksheet.getCell(currentRow, 12).numFmt = "0";
-      worksheet.getCell(currentRow, 13).formula = `(K${currentRow}+E${currentRow}+J${currentRow})*0.05`; // M - Комиссия Сириус 5%
-      worksheet.getCell(currentRow, 13).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 14).formula = `+K${currentRow}+E${currentRow}+J${currentRow}+M${currentRow}+L${currentRow}`; // N - Итого все платежи
-      worksheet.getCell(currentRow, 14).numFmt = "#,##0";
-      worksheet.getCell(currentRow, 15).formula = `N${currentRow}/C${currentRow}`; // O - Себестоимость единицы
-      worksheet.getCell(currentRow, 15).numFmt = "#,##0";
+      
+      // M - Комиссия Сириус 5% = (K + E + J) * 0.05
+      const cellM = worksheet.getCell(currentRow, 13);
+      cellM.formula = `(K${currentRow}+E${currentRow}+J${currentRow})*0.05`;
+      cellM.numFmt = "#,##0.00";
+      
+      // N - Итого все платежи = K + E + J + M + L
+      const cellN = worksheet.getCell(currentRow, 14);
+      cellN.formula = `K${currentRow}+E${currentRow}+J${currentRow}+M${currentRow}+L${currentRow}`;
+      cellN.numFmt = "#,##0.00";
+      
+      // O - Себестоимость единицы = N / C
+      const cellO = worksheet.getCell(currentRow, 15);
+      cellO.formula = `N${currentRow}/C${currentRow}`;
+      cellO.numFmt = "#,##0.00";
+      
       // P - пустая колонка
       worksheet.getCell(currentRow, 17).value = item.weight || 0; // Q - Вес
+      worksheet.getCell(currentRow, 17).numFmt = "#,##0.00";
       worksheet.getCell(currentRow, 18).value = item.volume || 0; // R - Объем
+      worksheet.getCell(currentRow, 18).numFmt = "#,##0.00";
 
-      // Форматирование ячеек данных
+      // Форматирование ячеек данных (применяем после установки формул, чтобы не перезаписать numFmt)
       for (let col = 1; col <= 18; col++) {
         if (col === 16) continue; // Пропускаем пустую колонку P
         const cell = worksheet.getCell(currentRow, col);
+        
+        // Сохраняем numFmt, если он уже установлен
+        const existingNumFmt = cell.numFmt;
+        
         cell.font = { size: 11, name: "Calibri" };
         cell.fill = {
           type: "pattern",
@@ -1277,6 +1322,16 @@ async function generateCommercialOfferExcel() {
           vertical: "middle", 
           horizontal: (col === 1 || col === 17 || col === 18) ? "left" : "right" 
         };
+        
+        // Восстанавливаем numFmt, если он был установлен
+        if (existingNumFmt) {
+          cell.numFmt = existingNumFmt;
+        } else if (col >= 4 && col <= 15 && col !== 12) {
+          // Для числовых колонок устанавливаем формат, если его не было
+          cell.numFmt = "#,##0.00";
+        } else if (col === 12) {
+          cell.numFmt = "0";
+        }
       }
 
       currentRow++;
@@ -1299,34 +1354,58 @@ async function generateCommercialOfferExcel() {
     // Строка ИТОГО (строка 15 для авто, 22 для ЖД)
     worksheet.getCell(currentRow, 1).value = "ИТОГО";
     worksheet.getCell(currentRow, 1).font = { bold: true, size: 11, name: "Calibri" };
+    
+    // Формулы для строки ИТОГО
     worksheet.getCell(currentRow, 3).formula = `SUM(C${firstDataRow}:C${lastDataRow})`;
+    worksheet.getCell(currentRow, 3).numFmt = "#,##0";
+    
     worksheet.getCell(currentRow, 4).formula = `SUM(D${firstDataRow}:D${lastDataRow})`;
+    worksheet.getCell(currentRow, 4).numFmt = "#,##0.00";
+    
     worksheet.getCell(currentRow, 5).formula = `SUM(E${firstDataRow}:E${lastDataRow})`;
+    worksheet.getCell(currentRow, 5).numFmt = "#,##0.00";
+    
     worksheet.getCell(currentRow, 6).formula = `SUM(F${firstDataRow}:F${lastDataRow})`;
+    worksheet.getCell(currentRow, 6).numFmt = "#,##0.00";
+    
     worksheet.getCell(currentRow, 7).formula = `SUM(G${firstDataRow}:G${lastDataRow})`;
+    worksheet.getCell(currentRow, 7).numFmt = "#,##0.00";
+    
     worksheet.getCell(currentRow, 8).formula = `SUM(H${firstDataRow}:H${lastDataRow})`;
+    worksheet.getCell(currentRow, 8).numFmt = "#,##0.00";
+    
     worksheet.getCell(currentRow, 9).formula = `SUM(I${firstDataRow}:I${lastDataRow})`;
+    worksheet.getCell(currentRow, 9).numFmt = "#,##0.00";
+    
     worksheet.getCell(currentRow, 10).formula = `SUM(J${firstDataRow}:J${lastDataRow})`;
+    worksheet.getCell(currentRow, 10).numFmt = "#,##0.00";
+    
     // K - Доставка ИТОГО (значение или формула)
     if (totalVolumeValue > 0) {
       worksheet.getCell(currentRow, 11).value = totalDeliveryValue;
-      worksheet.getCell(currentRow, 11).numFmt = "#,##0";
+      worksheet.getCell(currentRow, 11).numFmt = "#,##0.00";
       // Обновляем формулы доставки для всех строк данных (пропорционально объёму)
       // Формула как в шаблоне: $K$15/$R$15*R12
       const totalDeliveryRow = currentRow;
       const totalVolumeRow = currentRow;
       for (let dataRow = firstDataRow; dataRow <= lastDataRow; dataRow++) {
         worksheet.getCell(dataRow, 11).formula = `$K$${totalDeliveryRow}/$R$${totalVolumeRow}*R${dataRow}`;
-        worksheet.getCell(dataRow, 11).numFmt = "#,##0";
+        worksheet.getCell(dataRow, 11).numFmt = "#,##0.00";
       }
     } else {
       worksheet.getCell(currentRow, 11).formula = `SUM(K${firstDataRow}:K${lastDataRow})`;
+      worksheet.getCell(currentRow, 11).numFmt = "#,##0.00";
     }
     worksheet.getCell(currentRow, 12).formula = `SUM(L${firstDataRow}:L${lastDataRow})`;
+    worksheet.getCell(currentRow, 12).numFmt = "0";
     worksheet.getCell(currentRow, 13).formula = `SUM(M${firstDataRow}:M${lastDataRow})`;
+    worksheet.getCell(currentRow, 13).numFmt = "#,##0.00";
     worksheet.getCell(currentRow, 14).formula = `SUM(N${firstDataRow}:N${lastDataRow})`;
+    worksheet.getCell(currentRow, 14).numFmt = "#,##0.00";
     worksheet.getCell(currentRow, 17).formula = `SUM(Q${firstDataRow}:Q${lastDataRow})`; // Вес
+    worksheet.getCell(currentRow, 17).numFmt = "#,##0.00";
     worksheet.getCell(currentRow, 18).formula = `SUM(R${firstDataRow}:R${lastDataRow})`; // Объем
+    worksheet.getCell(currentRow, 18).numFmt = "#,##0.00";
 
     // Форматирование строки ИТОГО
     for (let col = 1; col <= 18; col++) {
