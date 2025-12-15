@@ -1,0 +1,12 @@
+# Сгенерированные Excel файлы
+*.xlsx
+!TWS_TNVED_*.xlsx
+!Копия_*.xlsx
+
+# Временные файлы
+.DS_Store
+*.log
+
+# Node modules (если будут)
+node_modules/
+
